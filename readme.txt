@@ -1,4 +1,4 @@
-🎰 Guide de survie : AutoRollFor v3.2
+🎰 Guide de survie : AutoRollFor 
 L'assistant qui roll plus vite que son ombre (Spécial Turtle WoW / RollFor)
 
 AutoRollFor est un mini-addon conçu pour s'intégrer directement à AtlasLoot. Il permet de pré-enregistrer vos choix de loot (MS, OS ou Transmo) et d'automatiser vos jets de dés quand le Raid Leader utilise l'addon RollFor.
@@ -71,4 +71,5 @@ L'addon va simuler une annonce de Raid Leader et réagir selon vos réglages.
 /ar test : Simule un loot pour tester la détection.
 
 /run AutoRollPrefs = {}; ReloadUI(); : ATTENTION, ceci efface absolument toutes vos réservations d'un coup.
+
 
