@@ -5,73 +5,50 @@ https://github.com/Otari98/AtlasLoot/ (Obligatoire)
 🎰 Guide de survie : AutoRollFor 
 L'assistant qui roll plus vite que son ombre (Spécial Turtle WoW / RollFor)
 
-AutoRollFor est un mini-addon conçu pour s'intégrer directement à AtlasLoot. Il permet de pré-enregistrer vos choix de loot (MS, OS ou Transmo) et d'automatiser vos jets de dés quand le Raid Leader utilise l'addon RollFor.
+AutoRollFor est un addon de gestion de butin pour Turtle WoW (1.12.1). Il vous permet de marquer vos objets convoités dans AtlasLoot et affiche une fenêtre d'alerte interactive dès qu'ils sont annoncés en raid, vous évitant ainsi de rater un jet de dés important.
 
-🛠️ Installation rapide
-Installez le dossier AutoRollFor dans votre répertoire Interface\AddOns\. 
+✨ Fonctionnalités
+Marquage AtlasLoot : Clic-droit sur un objet pour définir une priorité (MS, OS, TMOG).
 
-Renommez le si vous l'avez telechargez de githubs en AutoRollFor
+Indicateurs visuels : Affiche des labels (MS, OS, TM) directement sur les icônes d'AtlasLoot.
 
-Vérifiez bien qu'AtlasLoot est activé.
+Alerte Interactive : Une fenêtre surgit dès qu'un objet réservé est détecté dans le chat de raid.
 
-En jeu, tapez /ar pour vérifier que l'addon répond.
+Sécurité Totale : Aucun jet automatique (/roll) n'est lancé sans votre clic.
 
-🖱️ Comment ça marche ? (C'est ultra simple)
-Plus besoin de chercher l'objet dans une liste complexe. Tout se passe dans votre AtlasLoot habituel :
+Optimisé Turtle WoW : Conçu pour être ultra-léger et compatible avec les spécificités du serveur.
 
-Ouvrez AtlasLoot sur le boss de votre choix.
+🛠 Installation (Turtle WoW Launcher)
+La méthode la plus simple pour installer et garder l'addon à jour :
 
-CLIC-DROIT sur l'objet qui vous intéresse.
+Ouvrez votre Turtle WoW Launcher.
 
-Choisissez votre priorité :
+Cliquez sur l'onglet Addons.
 
-Main Spec (MS) : Pour un roll à 100.
+Cliquez sur le bouton Install from URL (en haut à droite).
 
-Off Spec (OS) : Pour un roll à 99.
+Copiez et collez l'URL de ce dépôt GitHub :
+https://github.com/VOTRE_NOM_UTILISATEUR/AutoRollFor
 
-Transmog (TM) : Pour un roll à 98.
+Cliquez sur Install. Le launcher s'occupera de créer le dossier correctement.
 
-Optionnel : Cochez "Lancer le dé automatiquement" pour que l'addon s'occupe de tout sans vous poser de questions.
+📖 Mode d'emploi
+Ouvrez AtlasLoot.
 
-👀 Les indicateurs visuels
-Une fois un objet réservé, un petit texte apparaît sur l'icône dans AtlasLoot :
+Faites un clic-droit sur l'objet que vous convoitez.
 
-[MS] : Réservé en Main Spec.
+Sélectionnez la catégorie de réservation.
 
-[OS] : Réservé en Off Spec.
+En raid, lorsqu'un objet réservé est annoncé (ex: "Roll for [Lien d'objet]"), une fenêtre apparaît au centre de votre écran.
 
-[TM] : Réservé en Transmo.
+Cliquez sur le bouton correspondant pour lancer votre /roll.
 
-* (Étoile jaune) : Le roll est en mode Automatique.
+Commandes en jeu
+/ar : Affiche la version actuelle.
 
-⚔️ En Raid (Master Loot)
-Quand le Raid Leader lance un loot avec RollFor, l'addon scanne le chat :
+/ar test : Simule une alerte de loot (nécessite d'avoir réservé au moins un objet dans AtlasLoot pour fonctionner).
 
-Si vous êtes en mode AUTO : Le jet de dés est lancé instantanément. Vous n'avez rien à faire.
+⚠️ Notes importantes
+Dépendance : Nécessite l'addon AtlasLoot.
 
-Si vous êtes en mode MANUEL : Une fenêtre surgit au milieu de l'écran avec 4 boutons clairs (MS, OS, TM, Passer). Cliquez, c'est roll !
-
-🏰 En Donjon (Group Loot)
-L'addon gère aussi le mode "Besoin ou Cupidité" classique :
-
-Réservé MS + Auto ➡️ L'addon clique sur BESOIN.
-
-Réservé OS/TM + Auto ➡️ L'addon clique sur CUPIDITÉ.
-
-Si pas d'Auto, la fenêtre classique de WoW s'affiche normalement.
-
-🧪 Tester l'addon
-Vous voulez vérifier que tout est prêt avant le raid ?
-
-Réservez un objet au pif dans AtlasLoot (Clic-droit).
-
-Tapez /ar test dans votre barre de chat.
-
-L'addon va simuler une annonce de Raid Leader et réagir selon vos réglages.
-
-💡 Commandes utiles
-/ar : Affiche l'aide et les commandes.
-
-/ar test : Simule un loot pour tester la détection.
-
-/run AutoRollPrefs = {}; ReloadUI(); : ATTENTION, ceci efface absolument toutes vos réservations d'un coup.
+Mode de butin : Fonctionne uniquement sur les annonces de type "Master Loot" (Master Looters utilisant l'addon RollFor ou annonces manuelles). Le butin de groupe classique est ignoré pour éviter les spams inutiles en donjon.
