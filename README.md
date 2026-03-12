@@ -28,7 +28,7 @@ Cliquez sur l'onglet Addons.
 Cliquez sur le bouton Install from URL (en haut à droite).
 
 Copiez et collez l'URL de ce dépôt GitHub :
-https://github.com/VOTRE_NOM_UTILISATEUR/AutoRollFor
+https://github.com/Kaladjin/AutoRollFor
 
 Cliquez sur Install. Le launcher s'occupera de créer le dossier correctement.
 
