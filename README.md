@@ -1,6 +1,7 @@
 
 https://github.com/Otari98/AtlasLoot/ (Obligatoire)
 
+! [](ezgif-8c26f5045c8a21d6.gif)
 
 🎰 Guide de survie : AutoRollFor 
 L'assistant qui roll plus vite que son ombre (Spécial Turtle WoW / RollFor)
