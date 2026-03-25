@@ -2,62 +2,117 @@
 -- 1. INITIALISATION ET VARIABLES
 -- ==========================================================
 if not AutoRollPrefs then AutoRollPrefs = {} end
+if not AutoRollPrefs.Config then AutoRollPrefs.Config = {} end
+
 local currentItemID = nil
+local AutoRollQueue = {}
+
+-- Création d'un Tooltip invisible pour "forcer" le cache du serveur
+local Scanner = CreateFrame("GameTooltip", "AutoRollScanner", nil, "GameTooltipTemplate")
+Scanner:SetOwner(WorldFrame, "ANCHOR_NONE")
 
 -- ==========================================================
--- 2. LE MENU CLIC-DROIT (Intégration AtlasLoot)
+-- 2. CRÉATION DE L'INTERFACE
 -- ==========================================================
-local menuFrame = CreateFrame("Frame", "AutoRollContextMenu", UIParent, "UIDropDownMenuTemplate")
+local alert = CreateFrame("Frame", "AutoRollAlert", UIParent)
+alert:SetWidth(280); alert:SetHeight(100) -- Hauteur réduite à 100
+alert:SetBackdrop({bgFile="Interface\\ChatFrame\\ChatFrameBackground", edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border", tile=true, tileSize=12, edgeSize=12, insets={4,4,4,4}})
+alert:SetBackdropColor(0,0,0,0.9); alert:Hide()
 
-UIDropDownMenu_Initialize(menuFrame, function()
-    if not AutoRollPrefs then AutoRollPrefs = {} end
-    if not currentItemID then return end
-    
-    local prefs = AutoRollPrefs[currentItemID] or { ms=false, os=false, tmog=false }
-    local info = {}
-    
-    info.text = "Réserver pour AutoRoll"
-    info.isTitle = 1; info.notCheckable = 1
-    UIDropDownMenu_AddButton(info)
-    
-    local options = { 
-        {k="ms", t="Main Spec (MS)"}, 
-        {k="os", t="Off Spec (OS)"}, 
-        {k="tmog", t="Transmog (TMOG)"} 
-    }
+-- Positionnement & Drag (Inchangé)
+if AutoRollPrefs.Config and AutoRollPrefs.Config.pos then
+    local p = AutoRollPrefs.Config.pos
+    alert:SetPoint(p.point, "UIParent", p.relativePoint, p.xOfs, p.yOfs)
+else
+    alert:SetPoint("CENTER", 0, 150)
+end
+alert:SetMovable(true); alert:EnableMouse(true); alert:RegisterForDrag("LeftButton")
+alert:SetScript("OnMouseDown", function() if arg1 == "LeftButton" then this:StartMoving() end end)
+alert:SetScript("OnMouseUp", function() 
+    this:StopMovingOrSizing()
+    local point, _, rel, x, y = this:GetPoint()
+    AutoRollPrefs.Config.pos = { point=point, relativePoint=rel, xOfs=x, yOfs=y }
+end)
 
-    for _, opt in ipairs(options) do
-        local selectionKey = opt.k 
-        info = {}
-        info.text = opt.t
-        info.func = function() 
-            if not currentItemID then return end
-            AutoRollPrefs[currentItemID] = { [selectionKey] = true } 
-            CloseDropDownMenus()
+local alertT = alert:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall") -- Plus petit
+alertT:SetPoint("TOP", 0, -10); alertT:SetText("Objet Réservé !")
+
+AutoRollAlertItem = alert:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+AutoRollAlertItem:SetPoint("CENTER", 0, 12)
+
+AutoRollAlertCount = alert:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+AutoRollAlertCount:SetPoint("BOTTOM", 0, 36)
+AutoRollAlertCount:SetTextColor(0.5, 0.5, 0.5)
+-- ==========================================================
+-- 3. LOGIQUE D'AFFICHAGE ET CACHE
+-- ==========================================================
+local function ShowNextAutoRollAlert()
+    local count = table.getn(AutoRollQueue)
+    if count > 0 then
+        local itemID = table.remove(AutoRollQueue, 1)
+        alert.currentID = itemID 
+        
+        local itemName, itemLink, itemQuality = GetItemInfo(itemID)
+        
+        if itemName then
+            local _, _, _, hex = GetItemQualityColor(itemQuality)
+            AutoRollAlertItem:SetText(hex .. "[" .. itemName .. "]|r")
+        else
+            -- SI L'OBJET N'EST PAS EN CACHE :
+            -- 1. On affiche un message d'attente
+            AutoRollAlertItem:SetText("|cffaaaaaaChargement de l'objet #" .. itemID .. "...|r")
+            -- 2. On FORCE le cache en mettant l'objet dans le tooltip invisible
+            Scanner:ClearLines()
+            Scanner:SetHyperlink("item:"..itemID..":0:0:0")
         end
-        info.checked = prefs[opt.k]
-        UIDropDownMenu_AddButton(info)
+        
+        if count > 1 then
+            AutoRollAlertCount:SetText("Objets en attente : " .. (count - 1))
+        else
+            AutoRollAlertCount:SetText("")
+        end
+        
+        alert:Show()
+        PlaySound("RaidWarning")
+    else
+        alert.currentID = nil
+        alert:Hide()
     end
+end
 
-    info = {}
-    info.text = "|cffff0000Annuler la réservation|r"
-    info.func = function() 
-        if not currentItemID then return end
-        AutoRollPrefs[currentItemID] = nil 
-        CloseDropDownMenus()
-    end
-    info.notCheckable = 1
-    UIDropDownMenu_AddButton(info)
-end, "MENU")
+-- Boutons
+local function CreateRollBtn(text, v, xOff)
+    local b = CreateFrame("Button", nil, alert, "UIPanelButtonTemplate")
+    b:SetWidth(55); b:SetHeight(20); b:SetPoint("BOTTOMLEFT", xOff, 12)
+    b:SetText(text)
+    
+    -- On réduit la police pour que "TMOG" ou "Passer" ne dépasse pas
+    local btnText = b:GetFontString()
+    btnText:SetFont("Fonts\\FRIZQT__.TTF", 9) 
+    
+    b:SetScript("OnClick", function() RandomRoll(1, v); ShowNextAutoRollAlert() end)
+    return b
+end
+
+-- Calcul des positions (Marge 10px + 4 boutons de 55px + Gaps de 12px)
+CreateRollBtn("MS", 100, 12)
+CreateRollBtn("OS", 99, 79)
+CreateRollBtn("TMOG", 98, 146)
+
+-- Bouton Passer (rougeâtre pour le distinguer)
+local bPass = CreateFrame("Button", nil, alert, "UIPanelButtonTemplate")
+bPass:SetWidth(55); bPass:SetHeight(20); bPass:SetPoint("BOTTOMLEFT", 213, 12)
+bPass:SetText("Passer")
+local bPassText = bPass:GetFontString()
+bPassText:SetFont("Fonts\\FRIZQT__.TTF", 9)
+bPass:SetScript("OnClick", function() ShowNextAutoRollAlert() end)
 
 -- ==========================================================
--- 3. LOGIQUE DE DÉTECTION (Alerte Visuelle Uniquement)
+-- 4. LOGIQUE DE DÉTECTION CHAT
 -- ==========================================================
 local eventFrame = CreateFrame("Frame")
-eventFrame:RegisterEvent("CHAT_MSG_RAID")
-eventFrame:RegisterEvent("CHAT_MSG_RAID_LEADER")
-eventFrame:RegisterEvent("CHAT_MSG_RAID_WARNING")
-eventFrame:RegisterEvent("CHAT_MSG_PARTY")
+eventFrame:RegisterEvent("CHAT_MSG_RAID"); eventFrame:RegisterEvent("CHAT_MSG_RAID_LEADER")
+eventFrame:RegisterEvent("CHAT_MSG_RAID_WARNING"); eventFrame:RegisterEvent("CHAT_MSG_PARTY")
 
 local function GetIDFromLink(link)
     if not link then return nil end
@@ -70,23 +125,31 @@ eventFrame:SetScript("OnEvent", function()
         local _, _, itemLink = string.find(arg1, "(|c%x+|Hitem:%d+.-|h%[.-%]|h|r)")
         local msgLower = string.lower(arg1)
         
-        if itemLink and (string.find(msgLower, "roll for") or string.find(msgLower, "jet pour") or string.find(msgLower, "roll sur") or string.find(msgLower, "random")) then
+        if itemLink and (string.find(msgLower, "roll for") or string.find(msgLower, "jet pour") or string.find(msgLower, "random")) then
             local itemID = GetIDFromLink(itemLink)
-            local pref = AutoRollPrefs[itemID]
-            
-            -- Si l'objet est réservé, on affiche TOUJOURS la fenêtre
-            if pref then
-                AutoRollAlertItem:SetText(itemLink)
-                AutoRollAlert:Show()
-                PlaySound("RaidWarning")
+            if itemID and AutoRollPrefs[itemID] then
+                table.insert(AutoRollQueue, itemID)
+                if not alert:IsVisible() then ShowNextAutoRollAlert() end
             end
         end
     end
 end)
 
 -- ==========================================================
--- 4. PIRATAGE VISUEL D'ATLASLOOT
+-- 5. UPDATE (ATLASLOOT + RAFRAICHISSEMENT CACHE)
 -- ==========================================================
+local menuFrame = CreateFrame("Frame", "AutoRollContextMenu", UIParent, "UIDropDownMenuTemplate")
+UIDropDownMenu_Initialize(menuFrame, function()
+    if not currentItemID then return end
+    local prefs = AutoRollPrefs[currentItemID] or { ms=false, os=false, tmog=false }
+    UIDropDownMenu_AddButton({ text = "Réserver pour AutoRoll", isTitle = 1, notCheckable = 1 })
+    local options = { {k="ms", t="Main Spec (MS)"}, {k="os", t="Off Spec (OS)"}, {k="tmog", t="Transmog (TMOG)"} }
+    for _, opt in ipairs(options) do
+        UIDropDownMenu_AddButton({ text = opt.t, func = function() AutoRollPrefs[currentItemID] = { [opt.k] = true }; CloseDropDownMenus() end, checked = prefs[opt.k] })
+    end
+    UIDropDownMenu_AddButton({ text = "|cffff0000Annuler|r", func = function() AutoRollPrefs[currentItemID] = nil; CloseDropDownMenus() end, notCheckable = 1 })
+end, "MENU")
+
 local atlasLootHooked = false
 local function HookAtlasLoot()
     if atlasLootHooked or not getglobal("AtlasLootItem_1") then return end
@@ -96,9 +159,8 @@ local function HookAtlasLoot()
             btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
             local oldClick = btn:GetScript("OnClick")
             btn:SetScript("OnClick", function()
-                if arg1 == "RightButton" and this.itemID and tonumber(this.itemID) > 0 then
-                    currentItemID = tonumber(this.itemID)
-                    ToggleDropDownMenu(1, nil, menuFrame, this:GetName(), 0, 0)
+                if arg1 == "RightButton" and this.itemID then
+                    currentItemID = tonumber(this.itemID); ToggleDropDownMenu(1, nil, menuFrame, this:GetName(), 0, 0)
                 elseif oldClick then oldClick() end
             end)
             btn.arInd = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -110,49 +172,30 @@ end
 
 local updateFrame = CreateFrame("Frame")
 updateFrame:SetScript("OnUpdate", function()
+    -- AtlasLoot
     if not atlasLootHooked and getglobal("AtlasLootItemsFrame") and getglobal("AtlasLootItemsFrame"):IsVisible() then HookAtlasLoot() end
-    if atlasLootHooked and getglobal("AtlasLootItemsFrame") and getglobal("AtlasLootItemsFrame"):IsVisible() then
+    if atlasLootHooked and getglobal("AtlasLootItemsFrame"):IsVisible() then
         for i = 1, 30 do
             local b = getglobal("AtlasLootItem_"..i)
             if b and b:IsVisible() and b.itemID then
                 local p = AutoRollPrefs[tonumber(b.itemID)]
-                if p then
-                    local t = (p.ms and "|cff00ff00MS|r") or (p.os and "|cff00ccffOS|r") or (p.tmog and "|cffff00ffTM|r") or ""
-                    b.arInd:SetText(t)
+                if p then b.arInd:SetText((p.ms and "|cff00ff00MS|r") or (p.os and "|cff00ccffOS|r") or (p.tmog and "|cffff00ffTM|r") or "")
                 else b.arInd:SetText("") end
             end
         end
     end
+    -- Rafraichissement auto du nom de l'objet si enfin chargé
+    if alert:IsVisible() and alert.currentID then
+        local itemName, _, itemQuality = GetItemInfo(alert.currentID)
+        if itemName then
+            local currentTxt = AutoRollAlertItem:GetText() or ""
+            if string.find(currentTxt, "Chargement") or string.find(currentTxt, "Objet #") then
+                local _, _, _, hex = GetItemQualityColor(itemQuality)
+                AutoRollAlertItem:SetText(hex .. "[" .. itemName .. "]|r")
+            end
+        end
+    end
 end)
-
--- ==========================================================
--- 5. FENÊTRE D'ALERTE (Mode Manuel)
--- ==========================================================
-local alert = CreateFrame("Frame", "AutoRollAlert", UIParent)
-alert:SetWidth(340); alert:SetHeight(110); alert:SetPoint("CENTER", 0, 150)
-alert:SetBackdrop({bgFile="Interface\\ChatFrame\\ChatFrameBackground", edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border", tile=true, tileSize=16, edgeSize=16, insets={5,5,5,5}})
-alert:SetBackdropColor(0,0,0,1); alert:Hide()
-
-local alertT = alert:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-alertT:SetPoint("TOP", 0, -15); alertT:SetText("Objet Réservé !")
-
-AutoRollAlertItem = alert:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-AutoRollAlertItem:SetPoint("CENTER", 0, 10)
-
-local function CreateRollBtn(text, v, xOff)
-    local b = CreateFrame("Button", nil, alert, "UIPanelButtonTemplate")
-    b:SetWidth(70); b:SetHeight(24); b:SetPoint("BOTTOMLEFT", xOff, 15); b:SetText(text)
-    b:SetScript("OnClick", function() RandomRoll(1, v); alert:Hide() end)
-    return b
-end
-
-CreateRollBtn("MS", 100, 15)
-CreateRollBtn("OS", 99, 90)
-CreateRollBtn("TMOG", 98, 165)
-
-local bPass = CreateFrame("Button", nil, alert, "UIPanelButtonTemplate")
-bPass:SetWidth(70); bPass:SetHeight(24); bPass:SetPoint("BOTTOMRIGHT", -15, 15); bPass:SetText("Passer")
-bPass:SetScript("OnClick", function() alert:Hide() end)
 
 -- ==========================================================
 -- 6. COMMANDE TEST
@@ -160,20 +203,16 @@ bPass:SetScript("OnClick", function() alert:Hide() end)
 SLASH_AUTOROLL1 = "/ar"
 SlashCmdList["AUTOROLL"] = function(msg)
     if msg == "test" then
-        for id, pref in pairs(AutoRollPrefs) do
-            local name, str, qual = GetItemInfo(id)
-            if name then
-                local _, _, _, hex = GetItemQualityColor(qual or 4)
-                local link = hex.."|H"..str.."|h["..name.."]|h|r"
-                local fakeMsg = "Roll for " .. link
-                DEFAULT_CHAT_FRAME:AddMessage("|cff00ccff[Test]|r: " .. fakeMsg)
-                arg1 = fakeMsg
-                eventFrame:GetScript("OnEvent")()
-                return
-            end
+        local count = 0
+        for id, _ in pairs(AutoRollPrefs) do
+            if id ~= "Config" then table.insert(AutoRollQueue, id); count = count + 1 end
         end
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000AutoRoll : Réservez un objet dans AtlasLoot d'abord.|r")
+        if count > 0 then 
+            if not alert:IsVisible() then ShowNextAutoRollAlert() end
+        else 
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000AutoRoll : Aucune réservation trouvée dans AtlasLoot.|r") 
+        end
     else
-        DEFAULT_CHAT_FRAME:AddMessage("|cff00ccffAutoRollFor v3.4|r: Fenêtre d'alerte uniquement.")
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00ccffAutoRollFor|r: /ar test pour tester.")
     end
 end
